@@ -10,8 +10,11 @@ def eval(args):
 
     success = 0
     pathLen = 0
+    num_targets = 0
     for _ in tqdm(range(args.num_trials)):
         patrols, catchers = search(param, verbose=False)
+        num_targets = max(map(lambda x: len(x.targetStates), patrols.values()))
+
         if len(catchers) > 0:
             epochPathLen = 0
             for name in catchers:
@@ -19,7 +22,7 @@ def eval(args):
             epochPathLen /= len(catchers)
             pathLen += epochPathLen
         numCatchs = Counter([p.success for p in patrols.values()])[True]
-        if numCatchs == args.num_targets:
+        if numCatchs >= num_targets:
             success += 1
     print(f"detectionRate {100 * success/args.num_trials :.3f}, avgPathLen {pathLen/args.num_trials:.3f}")
 
@@ -28,7 +31,6 @@ def eval(args):
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--param', type=str, default='param.yaml')
-    parser.add_argument('--num-targets', type=int, default=2)
     parser.add_argument('--num-trials', type=int, default=10)
 
     args = parser.parse_args()
