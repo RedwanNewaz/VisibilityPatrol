@@ -73,7 +73,7 @@ class FieldView:
         theta = np.arctan2(diff[1], diff[0])
         theta = np.rad2deg(theta)
         # radius = np.linalg.norm(diff)
-        radius = 50
+        radius = 30
         x, y = robot
 
         return self.getFOV(x, y, theta, radius)

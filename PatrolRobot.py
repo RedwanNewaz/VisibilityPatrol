@@ -8,6 +8,7 @@ from FieldView import FieldView
 from ObstaclePolygon import ObstaclePolygon
 import pathlib
 from collections import Counter
+import time
 
 
 def read_csv_from_dir(dirname):
@@ -40,14 +41,15 @@ def interpolate_points_between(start_point, goal_point, fixed_distance):
 
 class PatrolRobot(Thread):
     VMAX = 5
-    def __init__(self, initState, div, dmc, fov, transition, coordMap, targetStates, maxSteps, CATCHES, verbose=True):
+    dt = 0.1
+    def __init__(self, initState, div, dmc, fov, transition, coordMap, targetLocs, maxSteps, CATCHES, verbose=True):
         self.state = initState
         self.div = div
         self.dmc = dmc
         self.fov = fov
         self.transition = transition
         self.coordMap = coordMap
-        self.targetStates = targetStates
+        self.targetLocs = targetLocs
         self.maxSteps = maxSteps
         self.success = False
         self.trajectory = []
@@ -75,6 +77,7 @@ class PatrolRobot(Thread):
 
     def detectAlongTraj(self, trajectory):
         for l, goalcord in enumerate(trajectory):
+            # time.sleep(self.dt)
 
             if (l == 0) or (l == len(trajectory) - 1):
                 continue
@@ -82,13 +85,12 @@ class PatrolRobot(Thread):
             self.trajectory.append(robotcord)
             try:
                 FOV = self.fov.clippedFOV(robotcord, goalcord)
-                for tstate in self.targetStates:
-                    tcord = self.toPoint(tstate)
+                for tcord in self.targetLocs:
                     tpoint = Point(tcord[0], tcord[1])
                     if FOV.contains(tpoint):
                         if self.verbose:
-                            print(self.name, f"catches {tstate} target")
-                        self.CATCHES.add(self.name)
+                            print(self.name, f"catches {tcord} target")
+                        self.CATCHES.add(tuple(tcord))
                         return True
             except:
                 pass
@@ -106,7 +108,7 @@ class PatrolRobot(Thread):
             if self.detectAlongTraj(trajectory):
                 self.success = True
                 break
-            if len(self.CATCHES) == len(self.targetStates):
+            if len(self.CATCHES) == len(self.targetLocs):
                 break
             self.state = goalState
             step += 1
@@ -126,12 +128,14 @@ def search(param, verbose=True):
     target_states = param['target_states']
     number_iterations = param['number_iterations']
 
+    targetLocs = [coordMap[state] for state in target_states]
+
     obstacles = list(read_csv_from_dir('obstacles'))
     fov = FieldView(obstacles=obstacles, fov=120)
 
     patrols = {}
     for initState, div, dmc in zip(initial_robot_states, divs, DMCs):
-        pAgent = PatrolRobot(initState, div, dmc, fov, nextstate, coordMap, target_states, number_iterations, CATCHES, verbose)
+        pAgent = PatrolRobot(initState, div, dmc, fov, nextstate, coordMap, targetLocs, number_iterations, CATCHES, verbose)
         pAgent.start()
         patrols[pAgent.name] = pAgent
 
@@ -154,6 +158,9 @@ if __name__ == '__main__':
     colors = ['r', 'g', 'b', 'cyan', 'brown']
     obstacles = list(read_csv_from_dir('obstacles'))
 
+    for item in catchers:
+        plt.scatter(item[0], item[1], 100)
+
     N = max(map(lambda a: len(a.trajectory), patrols.values()))
     for t in range(N):
         if t == 0:
@@ -171,7 +178,7 @@ if __name__ == '__main__':
                 except Exception as error:
                     print(error)
         plt.axis([-10, 300, -10, 200])
-        plt.pause(0.1)
+        # plt.pause(0.1)
     plt.show()
 
 
